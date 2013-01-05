@@ -18,7 +18,19 @@ function when(value) {
     return new Promise(function (resolver) { resolver.fulfill(value) });
   }
 }
+function nodeify(promise, cb) {
+  if (typeof cb === 'function') {
+    promise.then(function (res) {
+      setTimeout(function () { cb(null, res); }, 0);//don't swallow exceptions
+    }, function (err) {
+      setTimeout(function () { cb(err); }, 0);//don't swallow exceptions
+    });
+  } else {
+    return promise;
+  }
+}
 
+var fs = require('fs');
 var jade = require('jade');
 var Parser = jade.Parser;
 var runtime = jade.runtime;
@@ -27,6 +39,7 @@ var renderFilter = Compiler.render;
 
 Object.keys(jade)
   .forEach(function (name) {
+    if (name === '__express' || name === 'filters') return;
     exports[name] = jade[name];
   });
 exports.Compiler = Compiler;
@@ -129,7 +142,7 @@ jade.compile = exports.compile = function(str, options){
     return fn;
   })
 
-  return function(locals){
+  return function (locals) {
     if (isPromise(fn)) {
       return fn.then(function (fn) {
         return fn(locals, runtime.attrs, runtime.escape, runtime.rethrow, runtime.merge, when, all, renderFilter);
@@ -138,4 +151,65 @@ jade.compile = exports.compile = function(str, options){
       return fn(locals, runtime.attrs, runtime.escape, runtime.rethrow, runtime.merge, when, all, renderFilter);
     }
   };
+};
+
+var promise = new Promise(function (resolver) { resolver.fulfill(null); });
+
+/**
+ * Render the given `str` of jade and invoke
+ * the callback `fn(err, str)`.
+ *
+ * Options:
+ *
+ *   - `cache` enable template caching
+ *   - `filename` filename required for `include` / `extends` and caching
+ *
+ * @param {String} str
+ * @param {Object|Function} options or fn
+ * @param {Function} fn
+ * @api public
+ */
+exports.render = function(str, options, fn){
+  nodeify(promise.then(function () {
+    // swap args
+    if ('function' == typeof options) {
+      fn = options, options = {};
+    }
+
+    // cache requires .filename
+    if (options.cache && !options.filename) {
+      throw new Error('the "filename" option is required for caching');
+    }
+
+    var path = options.filename;
+    var tmpl = options.cache
+      ? exports.cache[path] || (exports.cache[path] = exports.compile(str, options))
+      : exports.compile(str, options);
+    return tmpl(options);
+  }), fn);
+};
+
+/**
+ * Render a Jade file at the given `path` and callback `fn(err, str)`.
+ *
+ * @param {String} path
+ * @param {Object|Function} options or callback
+ * @param {Function} fn
+ * @api public
+ */
+
+exports.renderFile = function (path, options, fn) {
+  nodeify(promise.then(function () {
+    var key = path + ':string';
+
+    if ('function' == typeof options) {
+      fn = options, options = {};
+    }
+
+    options.filename = path;
+    var str = options.cache
+      ? exports.cache[key] || (exports.cache[key] = fs.readFileSync(path, 'utf8'))
+      : fs.readFileSync(path, 'utf8');
+    return exports.render(str, options, fn);
+  }), fn);
 };
