@@ -1,5 +1,5 @@
 html
   body
-    :markdown(href='/user/' + id, class='button')
+    :markdown(href='/user/' + (typeof id === 'number' ? id : '0'), class='button')
       This is _some_ awesome **markdown**
       whoop.

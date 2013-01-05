@@ -109,18 +109,24 @@ Compiler.prototype.visitFilter = function(filter){
   attrs = this.attrs(attrs);
   if (attrs.constant) {
     attrs = eval('({' + attrs.buf + '})');
-    this.buffer(consolidate[filter.name].render(text, attrs).then(function (res) {
-      if (consolidate[filter.name].outExtension === 'css') {
-        res = '<style type="text/css">' + res + '</style>';
-      } else if (consolidate[filter.name].outExtension === 'js') {
-        res = '<script type="text/javascript">\n' + res + '</script>';
-      }
-      return utils.text(res.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/'/g,'&#39;'))
-    }));
+    this.buffer(render(filter.name, text, attrs, true));
   } else {
-
+    this.buf.push('buf.push(render("' + filter.name + '", ' + JSON.stringify(text) + ', {' + attrs.buf + '}, false))')
   }
 };
+
+Compiler.render = render;
+function render(name, text, attrs, isCompileTime) {
+  return consolidate[name].render(text, attrs).then(function (res) {
+      if (consolidate[name].outExtension === 'css') {
+        res = '<style type="text/css">' + res + '</style>';
+      } else if (consolidate[name].outExtension === 'js') {
+        res = '<script type="text/javascript">\n' + res + '</script>';
+      }
+      if (isCompileTime) res = res.replace(/\\/g, '\\\\').replace(/\n/g, '\\n');
+      return utils.text(res.replace(/'/g,'&#39;'))
+    })
+}
 
   /**
    * Buffer the given `str` optionally escaped.

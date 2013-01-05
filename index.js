@@ -19,51 +19,11 @@ function when(value) {
   }
 }
 
-
-var consolidate = {};
-var consolidateB = require('consolidate-build');
-Object.keys(consolidateB).forEach(function (key) {
-  if (typeof consolidateB[key] != 'function') {
-    consolidate[key] = consolidateB[key];
-  } else {
-    consolidate[key] = function () {
-      var args = Array.prototype.slice.call(arguments);
-      return new Promise(function (resolver) {
-        try {
-          args.push(function (err, res) {
-            if (err) resolver.reject(err);
-            else resolver.fulfill(res);
-          });
-          consolidateB[key].apply(consolidateB, args);
-        } catch (ex) {
-          resolver.reject(ex);
-        }
-      });
-    };
-    consolidate[key].render = function () {
-      var args = Array.prototype.slice.call(arguments);
-      return new Promise(function (resolver) {
-        try {
-          args.push(function (err, res) {
-            if (err) resolver.reject(err);
-            else resolver.fulfill(res);
-          });
-          consolidateB[key].render.apply(consolidateB[key], args);
-        } catch (ex) {
-          resolver.reject(ex);
-        }
-      });
-    };
-    consolidate[key].outExtension = consolidateB[key].outExtension;
-    consolidate[key].inExtension = consolidateB[key].inExtension;
-  }
-});
-
 var jade = require('jade');
 var Parser = jade.Parser;
 var runtime = jade.runtime;
 var Compiler = require('./compiler');
-
+var renderFilter = Compiler.render;
 
 Object.keys(jade)
   .forEach(function (name) {
@@ -165,17 +125,17 @@ jade.compile = exports.compile = function(str, options){
     });
 
   fn = fn.then(function (src) {
-    fn = new Function('locals, attrs, escape, rethrow, merge, when, all, consolidate', src);
+    fn = new Function('locals, attrs, escape, rethrow, merge, when, all, render', src);
     return fn;
   })
 
   return function(locals){
     if (isPromise(fn)) {
       return fn.then(function (fn) {
-        return fn(locals, runtime.attrs, runtime.escape, runtime.rethrow, runtime.merge, when, all, consolidate);
+        return fn(locals, runtime.attrs, runtime.escape, runtime.rethrow, runtime.merge, when, all, renderFilter);
       })
     } else {
-      return fn(locals, runtime.attrs, runtime.escape, runtime.rethrow, runtime.merge, when, all, consolidate);
+      return fn(locals, runtime.attrs, runtime.escape, runtime.rethrow, runtime.merge, when, all, renderFilter);
     }
   };
 };

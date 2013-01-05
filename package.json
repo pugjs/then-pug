@@ -29,6 +29,7 @@
     "should": "*",
     "less": "*",
     "uglify-js": "*",
-    "coffee-script": "~1.4.0"
+    "coffee-script": "~1.4.0",
+    "ejs": "~0.8.3"
   }
 }
