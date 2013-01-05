@@ -1,0 +1,34 @@
+{
+  "name": "then-jade",
+  "version": "0.0.0",
+  "description": "Async promise based Jade",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha -R spec --require should"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/then/jade.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "readmeFilename": "README.md",
+  "gitHead": "c72a76d2bf9380b1652fb16b443360593c87174a",
+  "dependencies": {
+    "then-all": "~1.0.0",
+    "jade": "~0.27.7",
+    "is-promise": "~1.0.0",
+    "promise": "~1.2.2",
+    "consolidate-build": "~1.0.0"
+  },
+  "devDependencies": {
+    "mocha": "*",
+    "markdown": "*",
+    "stylus": "*",
+    "uubench": "*",
+    "should": "*",
+    "less": "*",
+    "uglify-js": "*",
+    "coffee-script": "~1.4.0"
+  }
+}
