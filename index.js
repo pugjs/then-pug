@@ -32,7 +32,7 @@ function nodeify(promise, cb) {
 
 var fs = require('fs');
 var jade = require('jade');
-var Parser = jade.Parser;
+var Parser = require('./parser');
 var runtime = jade.runtime;
 var Compiler = require('./compiler');
 var renderFilter = Compiler.render;

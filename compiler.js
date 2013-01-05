@@ -15,6 +15,8 @@ var nodes = require('jade').nodes
   , utils = require('jade').utils
   , oldCompiler = require('jade').Compiler;
 
+var path = require('path');
+var fs = require('fs');
 
 var all = require('then-all');
 var isPromise = require('is-promise');
@@ -57,16 +59,23 @@ Compiler.prototype.constructor = Compiler;
 
 Compiler.prototype.visitFilter = function(filter){
 
-  var text = filter.block.nodes.map(
-    function(node){ return node.val; }
-  ).join('\n');
+  var text;
+  if (filter.isInclude) {
+    var filename = path.join(path.dirname(this.options.filename), filter.block.val);
+    text = stripBOM(fs.readFileSync(filename).toString()).replace(/\r/g, '');
+    filter.attrs = filter.attrs || {};
+    filter.attrs.filename = '"' + filename + '"';
+  } else {
+    text = filter.block.nodes.map(
+      function(node){ return node.val; }
+    ).join('\n');
+    filter.attrs = filter.attrs || {};
+    filter.attrs.filename = '"' + this.options.filename + '"';
+  }
 
   if (filter.name === 'cdata') return this.buffer(utils.text('<![CDATA[\\n' + text + '\\n]]>'));
 
   if (!consolidate[filter.name]) throw new Error('unknown filter ":' + filter.name + '"');
-
-  filter.attrs = filter.attrs || {};
-  filter.attrs.filename = '"' + this.options.filename + '"';
 
   var attrs = Object.keys(filter.attrs).map(function (key) { return { name: key, val: filter.attrs[key]} });
   attrs = this.attrs(attrs);
@@ -129,3 +138,17 @@ Compiler.prototype.compile = function(){
   this.visit(this.node);
   return all(this.buf).then(function (buf) { return buf.join('\n'); });
 };
+
+/**
+ * Strip any UTF-8 BOM off of the start of `str`, if it exists.
+ *
+ * @param {String} str
+ * @return {String}
+ * @api private
+ */
+
+function stripBOM(str){
+  return 0xFEFF == str.charCodeAt(0)
+    ? str.substring(1)
+    : str;
+}

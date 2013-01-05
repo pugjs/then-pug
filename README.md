@@ -39,9 +39,20 @@ html
 
   Note that if you pass only constant arguments to your filters, they will be run at compile time, and therfore provide better performance (assuming you compile once and render multiple times).
 
+
+  There is also an option to filter a seperate file and include it:
+
+```jade
+html
+  head
+    :coffeescript path/to/script.coffee
+  body
+    :ejs(user=user) ejs/welcome-message.ejs
+    :markdown docs/readme.md
+```
+
 ## Road Map
 
   The following are features I want to implement (when I get time)
 
-   1. Using promies directly in the jade via some sort of `when` mixin.
-   2. Loading external files to use with the filters
+   1. Using promies directly in the jade via some sort of `when` function.
