@@ -170,11 +170,11 @@ var promise = new Promise(function (resolver) { resolver.fulfill(null); });
  * @api public
  */
 exports.render = function(str, options, fn){
-  nodeify(promise.then(function () {
-    // swap args
-    if ('function' == typeof options) {
-      fn = options, options = {};
-    }
+  // swap args
+  if ('function' == typeof options) {
+    fn = options, options = {};
+  }
+  return nodeify(promise.then(function () {
 
     // cache requires .filename
     if (options.cache && !options.filename) {
@@ -199,17 +199,16 @@ exports.render = function(str, options, fn){
  */
 
 exports.renderFile = function (path, options, fn) {
-  nodeify(promise.then(function () {
+  if ('function' == typeof options) {
+    fn = options, options = {};
+  }
+  return nodeify(promise.then(function () {
     var key = path + ':string';
-
-    if ('function' == typeof options) {
-      fn = options, options = {};
-    }
 
     options.filename = path;
     var str = options.cache
       ? exports.cache[key] || (exports.cache[key] = fs.readFileSync(path, 'utf8'))
       : fs.readFileSync(path, 'utf8');
-    return exports.render(str, options, fn);
+    return exports.render(str, options);
   }), fn);
 };

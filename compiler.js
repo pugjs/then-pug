@@ -27,44 +27,7 @@ function when(value) {
   }
 }
 
-var consolidate = {};
-var consolidateB = require('consolidate-build');
-Object.keys(consolidateB).forEach(function (key) {
-  if (typeof consolidateB[key] != 'function') {
-    consolidate[key] = consolidateB[key];
-  } else {
-    consolidate[key] = function () {
-      var args = Array.prototype.slice.call(arguments);
-      return new Promise(function (resolver) {
-        try {
-          args.push(function (err, res) {
-            if (err) resolver.reject(err);
-            else resolver.fulfill(res);
-          });
-          consolidateB[key].apply(consolidateB, args);
-        } catch (ex) {
-          resolver.reject(ex);
-        }
-      });
-    };
-    consolidate[key].render = function () {
-      var args = Array.prototype.slice.call(arguments);
-      return new Promise(function (resolver) {
-        try {
-          args.push(function (err, res) {
-            if (err) resolver.reject(err);
-            else resolver.fulfill(res);
-          });
-          consolidateB[key].render.apply(consolidateB[key], args);
-        } catch (ex) {
-          resolver.reject(ex);
-        }
-      });
-    };
-    consolidate[key].outExtension = consolidateB[key].outExtension;
-    consolidate[key].inExtension = consolidateB[key].inExtension;
-  }
-});
+var consolidate = require('then-build');
 
 /**
  * Initialize `Compiler` with the given `node`.
