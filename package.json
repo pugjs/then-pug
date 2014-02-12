@@ -19,7 +19,8 @@
     "coffee-script": "~1.7.1",
     "less": "~1.6.3",
     "marked": "~0.3.1",
-    "stylus": "~0.42.2"
+    "stylus": "~0.42.2",
+    "gnode": "0.0.6"
   },
   "scripts": {
     "test": "mocha -R spec"
