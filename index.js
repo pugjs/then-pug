@@ -1,214 +1,177 @@
-/*!
- * Jade
- * Copyright(c) 2010 TJ Holowaychuk <tj@vision-media.ca>
- * MIT Licensed
- */
-
-/**
- * Module dependencies.
- */
-
-var all = require('then-all');
-var isPromise = require('is-promise');
-var Promise = require('promise');
-function when(value) {
-  if (isPromise(value)) {
-    return value;
-  } else {
-    return new Promise(function (resolver) { resolver.fulfill(value) });
-  }
-}
-function nodeify(promise, cb) {
-  if (typeof cb === 'function') {
-    promise.then(function (res) {
-      setTimeout(function () { cb(null, res); }, 0);//don't swallow exceptions
-    }, function (err) {
-      setTimeout(function () { cb(err); }, 0);//don't swallow exceptions
-    });
-  } else {
-    return promise;
-  }
-}
+'use strict';
 
 var fs = require('fs');
-var jade = require('jade');
-var Parser = require('./parser');
-var runtime = jade.runtime;
-var Compiler = require('./compiler');
-var renderFilter = Compiler.render;
+// we have to use regenerator until UglifyJS has generator support
+var regenerator = require('regenerator');
+var ReadableStream = require('barrage').Readable;
+var Promise = require('promise');
+var ty = require('then-yield');
+var addWith = require('with');
+var runtime = require('jade/lib/runtime');
+var Parser = require('jade/lib/parser');
+var Compiler = require('./lib/compiler');
 
-Object.keys(jade)
-  .forEach(function (name) {
-    if (name === '__express' || name === 'filters') return;
-    exports[name] = jade[name];
-  });
-exports.Compiler = Compiler;
+var wrapGenerator = (function () {
+  var vm = require('vm');
+  var ctx = vm.createContext({});
+  var file = require.resolve('regenerator/runtime/dev.js');
+  vm.runInContext(fs.readFileSync(file, 'utf8'), ctx, file);
+  return ctx.wrapGenerator;
+}());
 
-
-
-/**
- * Parse the given `str` of jade and return a function body.
- *
- * @param {String} str
- * @param {Object} options
- * @return {String}
- * @api private
- */
-
-function parse(str, options){
+function parse(str, options) {
+  var filename = options.filename ? JSON.stringify(options.filename) : 'undefined';
   try {
     // Parse
-    var parser = new Parser(str, options.filename, options);
+    var parser = new (options.parser || Parser)(str, options.filename, options);
 
     // Compile
-    var compiler = new (options.compiler || Compiler)(parser.parse(), options)
-      , js = compiler.compile();
+    var compiler = new (options.compiler || Compiler)(parser.parse(), options);
 
-    return js.then(function (js) {
-      // Debug compiler
-      if (options.debug) {
-        console.error('\nCompiled Function:\n\n\033[90m%s\033[0m', js.replace(/^/gm, '  '));
-      }
+    var js = compiler.compile();
 
-      return ''
-        + 'var buf = [];\n'
-        + (options.self
-          ? 'var self = locals || {};\n' + js
-          : 'with (locals || {}) {\n' + js + '\n}\n')
-        + 'return all(buf).then(function (buf) { return buf.join(""); });';
-    });
+    // Debug compiler
+    if (options.debug) {
+      console.error('\nCompiled Function:\n\n\u001b[90m%s\u001b[0m', js.replace(/^/gm, '  '));
+    }
+
+    if (options.compileDebug !== false) {
+      js = [
+          'var jade_debug = [{ lineno: 1, filename: ' + filename + ' }];'
+        , 'try {'
+        , js
+        , '} catch (err) {'
+        , '  jade.rethrow(err, jade_debug[0].filename, jade_debug[0].lineno'
+          + (options.compileDebug === true ? ',' + JSON.stringify(str) : '') + ');'
+        , '}'
+      ].join('\n');
+    }
+
+    var globals = options.globals && Array.isArray(options.globals) ? options.globals : [];
+
+    globals.push('jade');
+    globals.push('jade_mixins');
+    globals.push('jade_interp');
+    globals.push('jade_debug');
+    globals.push('wrapGenerator');
+    globals.push('buf');
+
+    return ''
+      + 'var jade_mixins = {};\n'
+      + 'var jade_interp;\n'
+      + addWith('locals || {}', '\n' + regenerator('function* template() {\n' + js + '\n}\nreturn template;\n'), globals) + ';';
   } catch (err) {
     parser = parser.context();
-    runtime.rethrow(err, parser.filename, parser.lexer.lineno);
+    runtime.rethrow(err, parser.filename, parser.lexer.lineno, parser.input);
+  }
+};
+
+exports.compile = compile;
+function compile(str, options, callback) {
+  var fn = compileStreaming(str, options);
+  return function (locals, callback) {
+    return fn(locals).buffer('utf8', callback);
   }
 }
 
-/**
- * Strip any UTF-8 BOM off of the start of `str`, if it exists.
- *
- * @param {String} str
- * @return {String}
- * @api private
- */
+exports.compileStreaming = compileStreaming;
+function compileStreaming(str, options) {
+  var options = options || {};
+  var fn = parse(str, options);
 
-function stripBOM(str){
-  return 0xFEFF == str.charCodeAt(0)
-    ? str.substring(1)
-    : str;
-}
+  // get a generator function that takes `(locals, jade, buf)`
+  fn = new Function('wrapGenerator', 'return function (locals, jade, buf) {' + fn + '}')(wrapGenerator);
+  
+  // convert it to a function that takes `locals` and returns a readable stream
+  return function (locals) {
+    var stream = new ReadableStream();
+    
+    // streaming will be set to false whenever there is back-pressure
+    var streaming = false;
 
-/**
- * Compile a `Function` representation of the given jade `str`.
- *
- * Options:
- *
- *   - `compileDebug` when `false` debugging code is stripped from the compiled template
- *   - `client` when `true` the helper functions `escape()` etc will reference `jade.escape()`
- *      for use with the Jade client-side runtime.js
- *
- * @param {String} str
- * @param {Options} options
- * @return {Function}
- * @api public
- */
-jade.compile = exports.compile = function(str, options){
-  var options = options || {}
-    , client = options.client
-    , filename = options.filename
-      ? JSON.stringify(options.filename)
-      : 'undefined'
-    , fn;
+    function release() {
+      streaming = true;
+    }
 
-  str = stripBOM(String(str));
+    // make sure _read is always implemented
+    stream._read = release;
 
-  fn = parse(str, options)
-    .then(function (body) {
-      if (options.compileDebug !== false) {
-        return [
-            'var __jade = [{ lineno: 1, filename: ' + filename + ' }];'
-          , 'try {'
-          , body
-          , '} catch (err) {'
-          , '  rethrow(err, __jade[0].filename, __jade[0].lineno);'
-          , '}'
-        ].join('\n');
-      } else {
-        return body;
+    // then-yield unwrap function
+    // which implements the backpressure pause mechanism
+    function unwrap(value) {
+      if (streaming) return value;
+      return new Promise(function (resolve) {
+        stream._read = function () {
+          release();
+          this._read = release;
+          resolve(value);
+        }
+      });
+    }
+
+    var template = fn(locals, runtime, {
+      push: function () {
+        for (var i = 0; i < arguments.length; i++)
+          if (!stream.push(arguments[i].toString())) streaming = false;
       }
     });
 
-  fn = fn.then(function (src) {
-    fn = new Function('locals, attrs, escape, rethrow, merge, when, all, render', src);
-    return fn;
-  })
+    // call our function, setting `streaming` to `false` whenever
+    // the buffer is full and there is back-pressure
+    var result = ty.spawn(template, Promise.cast, unwrap);
 
-  return function (locals) {
-    if (isPromise(fn)) {
-      return fn.then(function (fn) {
-        return fn(locals, runtime.attrs, runtime.escape, runtime.rethrow, runtime.merge, when, all, renderFilter);
-      })
-    } else {
-      return fn(locals, runtime.attrs, runtime.escape, runtime.rethrow, runtime.merge, when, all, renderFilter);
-    }
+    // once the function completes, we end the stream by pushing `null`
+    if (result)
+      result.then(stream.push.bind(stream, null), function (err) {
+        stream.emit('error', err);
+        stream.push(null);
+      });
+    else
+      stream.push(null);
+
+    return stream;
   };
-};
+}
 
-var promise = new Promise(function (resolver) { resolver.fulfill(null); });
+exports.render = render;
+function render(str, options, callback) {
+  return Promise.from(null).then(function () {
+    return compile(str, options)(options, callback);
+  });
+}
 
-/**
- * Render the given `str` of jade and invoke
- * the callback `fn(err, str)`.
- *
- * Options:
- *
- *   - `cache` enable template caching
- *   - `filename` filename required for `include` / `extends` and caching
- *
- * @param {String} str
- * @param {Object|Function} options or fn
- * @param {Function} fn
- * @api public
- */
-exports.render = function(str, options, fn){
-  // swap args
-  if ('function' == typeof options) {
-    fn = options, options = {};
-  }
-  return nodeify(promise.then(function () {
+exports.renderStreaming = renderStreaming;
+function renderStreaming(str, options) {
+  return compileStreaming(str, options)(options);
+}
 
-    // cache requires .filename
-    if (options.cache && !options.filename) {
-      throw new Error('the "filename" option is required for caching');
-    }
-
-    var path = options.filename;
-    var tmpl = options.cache
-      ? exports.cache[path] || (exports.cache[path] = exports.compile(str, options))
-      : exports.compile(str, options);
-    return tmpl(options);
-  }), fn);
-};
 
 /**
- * Render a Jade file at the given `path` and callback `fn(err, str)`.
- *
- * @param {String} path
- * @param {Object|Function} options or callback
- * @param {Function} fn
- * @api public
+ * Template function cache.
  */
 
-exports.renderFile = function (path, options, fn) {
-  if ('function' == typeof options) {
-    fn = options, options = {};
-  }
-  return nodeify(promise.then(function () {
-    var key = path + ':string';
+exports.cache = {};
 
-    options.filename = path;
-    var str = options.cache
-      ? exports.cache[key] || (exports.cache[key] = fs.readFileSync(path, 'utf8'))
-      : fs.readFileSync(path, 'utf8');
-    return exports.render(str, options);
-  }), fn);
-};
+exports.renderFile = renderFile;
+function renderFile(path, options, callback) {
+  return Promise.from(null).then(function () {
+    return renderFileStreaming(path, options).buffer('utf8', callback);
+  });
+}
+
+exports.renderFileStreaming = renderFileStreaming;
+function renderFileStreaming(path, options) {
+  options = options || {};
+  options.filename = path;
+  var fn;
+  if (options.cache) {
+    fn = exports.cache['key:' + path];
+  }
+  if (!fn) {
+    fn = compileStreaming(fs.readFileSync(path, 'utf8'), options);
+  }
+  if (options.cache) {
+    exports.cache['key:' + path] = fn;
+  }
+  return fn(options);
+}

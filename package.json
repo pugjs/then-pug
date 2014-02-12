@@ -1,36 +1,33 @@
 {
   "name": "then-jade",
-  "version": "1.1.0",
-  "description": "Async promise based Jade",
-  "main": "index.js",
-  "scripts": {
-    "test": "mocha -R spec --require should",
-    "prepublish": "npm test"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/then/jade.git"
-  },
-  "author": "",
-  "license": "MIT",
-  "readmeFilename": "README.md",
-  "gitHead": "c72a76d2bf9380b1652fb16b443360593c87174a",
+  "version": "2.0.0",
+  "description": "Jade with async/streaming support via promises and generators",
+  "keywords": [],
   "dependencies": {
-    "then-all": "~1",
-    "jade": "~0.27.7",
-    "is-promise": "~1",
-    "promise": "~1",
-    "then-build": "~0.0.3"
+    "regenerator": "~0.4.0",
+    "then-yield": "0.0.1",
+    "barrage": "~1.0.0",
+    "promise": "~4.0.0",
+    "with": "~3.0.0",
+    "jade": "https://github.com/visionmedia/jade/archive/master.tar.gz"
   },
   "devDependencies": {
     "mocha": "*",
-    "markdown": "*",
-    "stylus": "*",
-    "uubench": "*",
-    "should": "*",
-    "less": "*",
-    "uglify-js": "*",
-    "coffee-script": "*",
-    "ejs": "*"
-  }
+    "should": "~3.1.2",
+    "uglify-js": "~2.4.12",
+    "mocha-as-promised": "~2.0.0",
+    "coffee-script": "~1.7.1",
+    "less": "~1.6.3",
+    "marked": "~0.3.1",
+    "stylus": "~0.42.2"
+  },
+  "scripts": {
+    "test": "mocha -R spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/then/then-jade.git"
+  },
+  "author": "ForbesLindesay",
+  "license": "MIT"
 }
