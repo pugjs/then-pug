@@ -1,5 +1,9 @@
 'use strict';
 
+/**
+ * Module dependencies.
+ */
+
 var fs = require('fs');
 // we have to use regenerator until UglifyJS has generator support
 var regenerator = require('regenerator');
@@ -11,6 +15,12 @@ var runtime = require('jade/lib/runtime');
 var Parser = require('jade/lib/parser');
 var Compiler = require('./lib/compiler');
 
+/**
+ * Prepare the `regenerator` runtime.
+ * `regenerator` transforms a function definition by removing all occurences
+ * of the --harmony generator syntax (`function*`, `yield`) and replacing
+ * them by calls to the wrapGenerator runtime
+ */
 var wrapGenerator = (function () {
   var vm = require('vm');
   var ctx = vm.createContext({});
@@ -19,6 +29,17 @@ var wrapGenerator = (function () {
   return ctx.wrapGenerator;
 }());
 
+/**
+ * Parse the given `str` of jade and return a function body.
+ *
+ * Original jade parser cannot be used because UglifyJS breaks
+ * when given a function definition using the --harmony generator syntax
+ *
+ * @param {String} str
+ * @param {Object} options
+ * @return {String}
+ * @api private
+ */
 function parse(str, options) {
   var filename = options.filename ? JSON.stringify(options.filename) : 'undefined';
   try {
@@ -66,14 +87,47 @@ function parse(str, options) {
   }
 };
 
+/**
+ * Compile an asynchronous `Function` representation of the given jade `str`.
+ *
+ * The resulting function takes 2 arguments :
+ *  - `locals` object containing local variables or promises that can be used in the template
+ *  - `callback` is a regular node-style callback function(err, res). it will be called asynchronously when
+ *    the rendering finishes
+ *
+ * For Options, see `compileStreaming` documentation
+ *
+ * @param {String} str
+ * @param {Options} options
+ * @return {Function}
+ * @api public
+ */
 exports.compile = compile;
-function compile(str, options, callback) {
+function compile(str, options) {
   var fn = compileStreaming(str, options);
   return function (locals, callback) {
     return fn(locals).buffer('utf8', callback);
   }
 }
 
+/**
+ * Compile a `Function` representation of the given jade `str`.
+ *
+ * This `Function` takes 1 argument:
+ *  - `locals` object containing local variables or promises that can be used in the template
+ * and returns a Readable stream, which is an async rendering of the template `str` for the given `locals`
+ *
+ * Options:
+ *  - `compileDebug` when `false` debugging code is stripped from the compiled
+ *    template, when it is explicitly `true`, the source code is included in
+ *    the compiled template for better accuracy.
+ *  - `filename` used to improve errors when `compileDebug` is not `false` and to resolve imports/extends
+ *
+ * @param {String} str
+ * @param {Options} options
+ * @return {Function}
+ * @api public
+ */
 exports.compileStreaming = compileStreaming;
 function compileStreaming(str, options) {
   var options = options || {};
@@ -133,6 +187,19 @@ function compileStreaming(str, options) {
   };
 }
 
+/**
+ * Render the given `str` of jade.
+ * `callback` will be called with the rendered template (node-style callback)
+ * 
+ * Options:
+ *   - `filename` filename required for `include` / `extends`
+ *
+ * @param {String} str
+ * @param {Object} options
+ * @param {Function} callback
+ * @return {Promise}
+ * @api public
+ */
 exports.render = render;
 function render(str, options, callback) {
   return Promise.from(null).then(function () {
@@ -140,6 +207,23 @@ function render(str, options, callback) {
   });
 }
 
+/**
+ * Render the given `str` of jade
+ * 
+ * `options`:
+ *   - `filename` filename required for `include` / `extends`
+ *
+ * `options` are used as `locals` at rendering time.
+ *
+ * The result is a ReadableStream wrapping the asynchronous rendering of the template.
+ * This stream can be piped into a WritableStream.
+ *
+ *
+ * @param {String} str
+ * @param {Object} options
+ * @return {ReadableStream}
+ * @api public
+ */
 exports.renderStreaming = renderStreaming;
 function renderStreaming(str, options) {
   return compileStreaming(str, options)(options);
@@ -152,6 +236,22 @@ function renderStreaming(str, options) {
 
 exports.cache = {};
 
+/**
+ * Render the given `path` file containing a jade.
+ * The compilation of the file is synchronous and uses an internal in-memory cache
+ * to avoid re-compiling the same file twice.
+ * The rendering is asynchronous.
+ *
+ * The result is a Promise that is will be resolved with the rendered template
+ * once the asynchronous rendering is finished.
+ *
+ * `options` are used as `locals` at rendering time.
+ *
+ * @param {String} path
+ * @param {Object} options
+ * @return {Promise}
+ * @api public
+ */
 exports.renderFile = renderFile;
 function renderFile(path, options, callback) {
   return Promise.from(null).then(function () {
@@ -159,6 +259,22 @@ function renderFile(path, options, callback) {
   });
 }
 
+/**
+ * Render the given `path` file containing a jade.
+ * The compilation of the file is synchronous and uses an internal in-memory cache
+ * to avoid re-compiling the same file twice.
+ * The rendering is asynchronous.
+ *
+ * The result is a ReadableStream wrapping the asynchronous rendering of the template.
+ * This stream can be piped into a WritableStream.
+ *
+ * `options` are used as `locals` at rendering time.
+ *
+ * @param {String} path
+ * @param {Object|undefined} options
+ * @return {ReadableStream}
+ * @api public
+ */
 exports.renderFileStreaming = renderFileStreaming;
 function renderFileStreaming(path, options) {
   options = options || {};
