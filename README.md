@@ -33,7 +33,7 @@ var thenJade = require('then-jade');
 Compiles a string containing a jade template into a rendering function.
 
 ```js
-var fn = compile(str, options);
+var fn = thenJade.compile(str, options);
 ```
 
 The rendering function can be called as `fn(locals, callback)` where `locals` are the user defined variables or generator/promises that can be used in the template. `callback` is a node-style `callback(err, res)` that will be called with the rendered template once the rendering is finished or with an error if something went wrong.
@@ -46,7 +46,7 @@ For `options`, see the documentation for `compileStreaming`
 Compiles a string containing a jade template into a rendering function.
 
 ```js
-var fn = compile(str, options);
+var fn = thenJade.compileStreaming(str, options);
 ```
 
 The rendering function can be called as `fn(locals)` where `locals` are the user defined variables or generator/promises that can be used in the template. The result of calling this function is a ReadableStream that will stream the rendered template.
