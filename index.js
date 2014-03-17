@@ -280,6 +280,9 @@ function renderFile(path, options, callback) {
  *
  * `options` are used as `locals` at rendering time.
  *
+ * Options:
+ *  - `cache`: true/false to activate the cache mechanism
+ *
  * @param {String} path
  * @param {Object|undefined} options
  * @return {ReadableStream}
