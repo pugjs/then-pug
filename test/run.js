@@ -7,8 +7,23 @@ var fs = require('fs');
 var assert = require('assert');
 var ty = require('then-yield');
 var uglify = require('uglify-js');
+var download = require('gethub');
 var Promise = require('promise');
 var jade = require('../');
+var upstream_version = require('../node_modules/jade/package.json').version;
+var upstream_jade = require('jade');
+
+// define custom filter which is necessary for upstream tests
+upstream_jade.filters['custom-filter'] = function (str, options) {
+  assert(str === 'foo bar');
+  assert(options.foo === 'bar');
+  return 'bar baz';
+};
+
+// download upstream jade tests (same version as jade dependency in package.json)
+it('download upstream jade test cases', function(done) {
+  download('visionmedia', 'jade', upstream_version, __dirname + '/upstream', done);
+});
 
 // create output directory
 try {
@@ -19,9 +34,8 @@ try {
   }
 }
 
-// test cases
-
-var cases = fs.readdirSync('test/cases').filter(function(file){
+// upstream test cases
+var cases = fs.readdirSync('test/upstream/test/cases').filter(function(file){
   return ~file.indexOf('.jade');
 }).map(function(file){
   return file.replace('.jade', '');
@@ -30,10 +44,10 @@ var cases = fs.readdirSync('test/cases').filter(function(file){
 cases.forEach(function(test){
   var name = test.replace(/[-.]/g, ' ');
   async(name, function* () {
-    var path = 'test/cases/' + test + '.jade';
+    var path = 'test/upstream/test/cases/' + test + '.jade';
     var str = fs.readFileSync(path, 'utf8');
-    var html = fs.readFileSync('test/cases/' + test + '.html', 'utf8').trim().replace(/\r/g, '');
-    var fn = jade.compile(str, { filename: path, pretty: true, basedir: 'test/cases' });
+    var html = fs.readFileSync('test/upstream/test/cases/' + test + '.html', 'utf8').trim().replace(/\r/g, '');
+    var fn = jade.compile(str, { filename: path, pretty: true, basedir: 'test/upstream/test/cases' });
     var actual = yield fn({title: 'Jade'});
 
     fs.writeFileSync(__dirname + '/output/' + test + '.html', actual)
@@ -46,7 +60,6 @@ cases.forEach(function(test){
 });
 
 // test yield-cases
-
 var generators = fs.readdirSync('test/gn-cases').filter(function(file){
   return ~file.indexOf('.jade');
 }).map(function(file){
