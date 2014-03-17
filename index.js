@@ -189,22 +189,28 @@ function compileStreaming(str, options) {
 
 /**
  * Render the given `str` of jade.
- * `callback` will be called with the rendered template (node-style callback)
+ *
+ * If the function is called with an optional node-style `callback`, the callback
+ * will be called with the result when the rendering is finished.
+ *
+ * Otherwise, the function will return a Promise that will be fulfilled when
+ * the rendering is finished.
  * 
  * Options:
  *   - `filename` filename required for `include` / `extends`
  *
  * @param {String} str
  * @param {Object} options
- * @param {Function} callback
- * @return {Promise}
+ * @param {Function|undefined} callback
+ * @return {undefined|Promise}
  * @api public
  */
 exports.render = render;
 function render(str, options, callback) {
   return Promise.from(null).then(function () {
-    return compile(str, options)(options, callback);
-  });
+    var fn = compileStreaming(str, options);
+    return fn(options).buffer('utf8');
+  }).nodeify(callback);
 }
 
 /**
@@ -242,21 +248,25 @@ exports.cache = {};
  * to avoid re-compiling the same file twice.
  * The rendering is asynchronous.
  *
- * The result is a Promise that is will be resolved with the rendered template
- * once the asynchronous rendering is finished.
+ * If the function is called with an optional node-style `callback`, the callback
+ * will be called with the result when the rendering is finished.
+ *
+ * Otherwise, the function will return a Promise that will be fulfilled when
+ * the rendering is finished.
  *
  * `options` are used as `locals` at rendering time.
  *
  * @param {String} path
  * @param {Object} options
- * @return {Promise}
+ * @param {Function|undefined} callback
+ * @return {undefined|Promise}
  * @api public
  */
 exports.renderFile = renderFile;
 function renderFile(path, options, callback) {
   return Promise.from(null).then(function () {
-    return renderFileStreaming(path, options).buffer('utf8', callback);
-  });
+    return renderFileStreaming(path, options).buffer('utf8');
+  }).nodeify(callback);
 }
 
 /**
