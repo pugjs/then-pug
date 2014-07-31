@@ -5,8 +5,6 @@
  */
 
 var fs = require('fs');
-// we have to use regenerator until UglifyJS has generator support
-var regenerator = require('regenerator');
 var ReadableStream = require('barrage').Readable;
 var Promise = require('promise');
 var ty = require('then-yield');
@@ -16,18 +14,44 @@ var Parser = require('jade/lib/parser');
 var Compiler = require('./lib/compiler');
 
 /**
+ * Choose Generators handler
+ * ES6 code may be an issue for legacy systems (old browsers, node < 0.11)
+ * Several solutions are which have their respective trade-offs
+ *  - regenerator:
+ *      modifies ES6 code to ES5 code. handles many legacy systems but slow
+ *  - hack:
+ *      search&replace hacks on the code to make it compatible with the UglifyJS module used by addWith
+ *      fast but only compatible with systems understanding ES6 generators
+ *
+ * Note: 2014-08-01 UglifyJS does not yet support ES6 generators ; remove hack when it does
+ */
+var supportsGenerators = true;
+var generator_handler = "hack";
+var regenerator, wrapGenerator;
+try {
+  Function('', 'var gn=function*() {}');
+} catch (ex) {
+  console.log(ex);
+  supportsGenerators = false;
+  generator_handler = "regenerator";
+  regenerator = require('regenerator');
+}
+
+/**
  * Prepare the `regenerator` runtime.
  * `regenerator` transforms a function definition by removing all occurences
  * of the --harmony generator syntax (`function*`, `yield`) and replacing
  * them by calls to the wrapGenerator runtime
  */
-var wrapGenerator = (function () {
-  var vm = require('vm');
-  var ctx = vm.createContext({});
-  var file = require.resolve('regenerator/runtime/dev.js');
-  vm.runInContext(fs.readFileSync(file, 'utf8'), ctx, file);
-  return ctx.wrapGenerator;
-}());
+if (generator_handler === "regenerator") {
+  wrapGenerator = (function () {
+    var vm = require('vm');
+    var ctx = vm.createContext({});
+    var file = require.resolve('regenerator/runtime/dev.js');
+    vm.runInContext(fs.readFileSync(file, 'utf8'), ctx, file);
+    return ctx.wrapGenerator;
+  }());
+}
 
 /**
  * Parse the given `str` of jade and return a function body.
@@ -74,13 +98,32 @@ function parse(str, options) {
     globals.push('jade_mixins');
     globals.push('jade_interp');
     globals.push('jade_debug');
-    globals.push('wrapGenerator');
+    if (generator_handler === "regenerator") {
+      globals.push('wrapGenerator');
+    }
     globals.push('buf');
+
+    var js_es5, js_wrapped, js_with;
+    switch(generator_handler) {
+      case 'regenerator':
+        js_wrapped = 'function* template() {\n' + js + '\n}\nreturn template;\n';
+        js_es5 = regenerator(js_wrapped);
+        js_with = addWith('locals || {}', '\n' + js_es5, globals);
+        break;
+      case 'hack':
+        js_es5 = js.replace(/function\*/g, 'function');
+        js_es5 = js_es5.replace(/yield\*?/g, '');
+        js_with = addWith('locals || {}', '\n' + 'function template() {\n' + js_es5 + '\n}\nreturn template;\n', globals)
+                    .replace(js_es5, js)
+                    .replace('function template', 'function* template');
+        break;
+    }
 
     return ''
       + 'var jade_mixins = {};\n'
       + 'var jade_interp;\n'
-      + addWith('locals || {}', '\n' + regenerator('function* template() {\n' + js + '\n}\nreturn template;\n'), globals) + ';';
+      + js_with + ';';
+
   } catch (err) {
     parser = parser.context();
     runtime.rethrow(err, parser.filename, parser.lexer.lineno, parser.input);
@@ -134,8 +177,15 @@ function compileStreaming(str, options) {
   var fn = parse(str, options);
 
   // get a generator function that takes `(locals, jade, buf)`
-  fn = new Function('wrapGenerator', 'return function (locals, jade, buf) {' + fn + '}')(wrapGenerator);
-  
+  switch(generator_handler) {
+    case 'regenerator':
+      fn = new Function('wrapGenerator', 'return function (locals, jade, buf) {' + fn + '}')(wrapGenerator);
+      break;
+    case 'hack':
+      fn = new Function ('return function (locals, jade, buf) {' + fn + '}')();
+      break;
+  }
+
   // convert it to a function that takes `locals` and returns a readable stream
   return function (locals) {
     var stream = new ReadableStream();

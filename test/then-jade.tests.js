@@ -1,6 +1,7 @@
 var jade = require('../');
 var assert = require('assert');
 var barrage = require('barrage');
+var PassThrough = require('stream').PassThrough;
 
 describe('then-jade', function(){
 
@@ -35,13 +36,13 @@ describe('then-jade', function(){
         done();
       });
     });
-    it('should use cache entry instread of compilation', function(done) {
+    it('should use cache entry instead of compilation', function(done) {
       var path = 'fakefile';
       jade.cache['key:'+path] = function(options) {
-        var s = new barrage.Map(function(x) { return x });
+        var s = barrage(new PassThrough);
         s.end('from cache');
         return s;
-      }; 
+      }
       jade.renderFile(path, { cache: true, message: 'Jade' }, function(err, res) {
         if (err) throw err;
         assert.equal(res, 'from cache');
