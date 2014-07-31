@@ -73,6 +73,10 @@ function parse(str, options) {
     // Compile
     var compiler = new (options.compiler || Compiler)(parser.parse(), options);
 
+    // Force the compilation of all mixins even if they are not used
+    // This is necessary for just-in-time mixin compilation
+    compiler.dynamicMixins = true;
+
     var js = compiler.compile();
 
     // Debug compiler
@@ -119,8 +123,9 @@ function parse(str, options) {
         break;
     }
 
+    // note: we allow injection/extraction of mixins via a jade_mixins locals
     return ''
-      + 'var jade_mixins = {};\n'
+      + 'var jade_mixins = locals.jade_mixins || {};\n'
       + 'var jade_interp;\n'
       + js_with + ';';
 
