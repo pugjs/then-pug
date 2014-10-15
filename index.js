@@ -204,7 +204,7 @@ function compileStreaming(str, options) {
 
     // call our function, setting `streaming` to `false` whenever
     // the buffer is full and there is back-pressure
-    var result = ty.spawn(template, Promise.cast, unwrap);
+    var result = ty.spawn(template, Promise.resolve, unwrap);
 
     // once the function completes, we end the stream by pushing `null`
     if (result)
