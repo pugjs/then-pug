@@ -16,24 +16,15 @@ var Compiler = require('./lib/compiler');
 /**
  * Choose Generators handler
  * ES6 code may be an issue for legacy systems (old browsers, node < 0.11)
- * Several solutions are which have their respective trade-offs
- *  - regenerator:
- *      modifies ES6 code to ES5 code. handles many legacy systems but slow
- *  - hack:
- *      search&replace hacks on the code to make it compatible with the UglifyJS module used by addWith
- *      fast but only compatible with systems understanding ES6 generators
- *
- * Note: 2014-08-01 UglifyJS does not yet support ES6 generators ; remove hack when it does
+ * When the system does not support ES6 generator, the compiled code
+ * is transformed to ES5 by the `regenerator` module
  */
-var supportsGenerators = true;
-var generator_handler = "hack";
+var hasGenerators = true;
 var regenerator, wrapGenerator;
 try {
   Function('', 'var gn=function*() {}');
 } catch (ex) {
-  console.log(ex);
-  supportsGenerators = false;
-  generator_handler = "regenerator";
+  hasGenerators = false;
   regenerator = require('regenerator');
 }
 
@@ -43,7 +34,7 @@ try {
  * of the --harmony generator syntax (`function*`, `yield`) and replacing
  * them by calls to the wrapGenerator runtime
  */
-if (generator_handler === "regenerator") {
+if (!hasGenerators) {
   wrapGenerator = (function () {
     var vm = require('vm');
     var ctx = vm.createContext({});
@@ -102,32 +93,22 @@ function parse(str, options) {
     globals.push('jade_mixins');
     globals.push('jade_interp');
     globals.push('jade_debug');
-    if (generator_handler === "regenerator") {
+    if (!hasGenerators) {
       globals.push('wrapGenerator');
     }
     globals.push('buf');
 
-    var js_es5, js_wrapped, js_with;
-    switch(generator_handler) {
-      case 'regenerator':
-        js_wrapped = 'function* template() {\n' + js + '\n}\nreturn template;\n';
-        js_es5 = regenerator(js_wrapped);
-        js_with = addWith('locals || {}', '\n' + js_es5, globals);
-        break;
-      case 'hack':
-        js_es5 = js.replace(/function\*/g, 'function');
-        js_es5 = js_es5.replace(/yield\*?/g, '');
-        js_with = addWith('locals || {}', '\n' + 'function template() {\n' + js_es5 + '\n}\nreturn template;\n', globals)
-                    .replace(js_es5, js)
-                    .replace('function template', 'function* template');
-        break;
+    js = 'function* template() {\n' + js + '\n}\nreturn template;\n';
+    if (!hasGenerators) {
+      js = regenerator(js);
     }
+    js = addWith('locals || {}', '\n' + js, globals);
 
     // note: we allow injection/extraction of mixins via a jade_mixins locals
     return ''
       + 'var jade_mixins = locals.jade_mixins || {};\n'
       + 'var jade_interp;\n'
-      + js_with + ';';
+      + js + ';';
 
   } catch (err) {
     parser = parser.context();
@@ -182,13 +163,10 @@ function compileStreaming(str, options) {
   var fn = parse(str, options);
 
   // get a generator function that takes `(locals, jade, buf)`
-  switch(generator_handler) {
-    case 'regenerator':
-      fn = new Function('wrapGenerator', 'return function (locals, jade, buf) {' + fn + '}')(wrapGenerator);
-      break;
-    case 'hack':
+  if (hasGenerators) {
       fn = new Function ('return function (locals, jade, buf) {' + fn + '}')();
-      break;
+  } else {
+      fn = new Function('wrapGenerator', 'return function (locals, jade, buf) {' + fn + '}')(wrapGenerator);
   }
 
   // convert it to a function that takes `locals` and returns a readable stream
