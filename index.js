@@ -239,7 +239,7 @@ function compileStreaming(str, options) {
  */
 exports.render = render;
 function render(str, options, callback) {
-  return Promise.from(null).then(function () {
+  return Promise.resolve(null).then(function () {
     var fn = compileStreaming(str, options);
     return fn(options).buffer('utf8');
   }).nodeify(callback);
@@ -296,7 +296,7 @@ exports.cache = {};
  */
 exports.renderFile = renderFile;
 function renderFile(path, options, callback) {
-  return Promise.from(null).then(function () {
+  return Promise.resolve(null).then(function () {
     return renderFileStreaming(path, options).buffer('utf8');
   }).nodeify(callback);
 }

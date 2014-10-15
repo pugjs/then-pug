@@ -6,8 +6,8 @@
   "dependencies": {
     "regenerator": "~0.4.0",
     "then-yield": "0.0.1",
-    "barrage": "~1.0.0",
-    "promise": "~4.0.0",
+    "barrage": "~1.1.0",
+    "promise": "~6.0.0",
     "with": "~4.0.0",
     "jade": "1.3.0"
   },
