@@ -47,9 +47,6 @@ if (!hasGenerators) {
 /**
  * Parse the given `str` of jade and return a function body.
  *
- * Original jade parser cannot be used because UglifyJS breaks
- * when given a function definition using the --harmony generator syntax
- *
  * @param {String} str
  * @param {Object} options
  * @return {String}
@@ -66,7 +63,7 @@ function parse(str, options) {
 
     // Force the compilation of all mixins even if they are not used
     // This is necessary for just-in-time mixin compilation
-    compiler.dynamicMixins = true;
+    compiler.dynamicMixins = options.dynamicMixins || false;
 
     var js = compiler.compile();
 
@@ -150,6 +147,8 @@ function compile(str, options) {
  *  - `compileDebug` when `false` debugging code is stripped from the compiled
  *    template, when it is explicitly `true`, the source code is included in
  *    the compiled template for better accuracy.
+ *  - `dynamicMixins` when `true` this will force the compiler into the `dynamicMixins` mode. All mixins
+ *    will be compiled into code even if they are not actually used
  *  - `filename` used to improve errors when `compileDebug` is not `false` and to resolve imports/extends
  *
  * @param {String} str
