@@ -14,6 +14,11 @@ var Parser = require('jade/lib/parser');
 var Compiler = require('./lib/compiler');
 
 /**
+ * Expose `Parser`.
+ */
+exports.Parser = Parser
+
+/**
  * Choose Generators handler
  * ES6 code may be an issue for legacy systems (old browsers, node < 0.11)
  * When the system does not support ES6 generator, the compiled code
