@@ -11,6 +11,7 @@ The Jade template engine is a templating engine with a 2 stage process :
  * Generators and Promises can be used in the user defined `locals` and the rendering will be progressive, waiting asynchronously for the resolution of the promises
  * The rendered output is made available as a ReadableStream with back-pressure implemented, so the rendering will only be done as fast as the downstream WritableStream can handle it
 
+It is not the goal of `then_jade` to modify the compilation phase of the process (stage 1). This means for example that extends & includes will continue to be loaded synchronously by jade.
 
 [![Build Status](https://travis-ci.org/then/then-jade.png?branch=master)](https://travis-ci.org/then/then-jade)
 [![Dependency Status](https://gemnasium.com/then/then-jade.png)](https://gemnasium.com/then/then-jade)
