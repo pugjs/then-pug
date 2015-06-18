@@ -1,15 +1,15 @@
 {
   "name": "then-jade",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "description": "Jade with async/streaming support via promises and generators",
   "keywords": [],
   "dependencies": {
     "barrage": "~1.1.0",
     "jade": "1.11.0",
-    "promise": "~6.0.0",
-    "regenerator": "~0.4.0",
+    "promise": "~7.0.3",
+    "regenerator": "~0.8.30",
     "then-yield": "0.0.1",
-    "with": "~4.0.0"
+    "with": "~5.0.0"
   },
   "devDependencies": {
     "mocha": "*",

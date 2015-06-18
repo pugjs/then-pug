@@ -14,7 +14,7 @@ The Jade template engine is a templating engine with a 2 stage process :
 It is not the goal of `then_jade` to modify the compilation phase of the process (stage 1). This means for example that extends & includes will continue to be loaded synchronously by jade.
 
 [![Build Status](https://travis-ci.org/jadejs/then-jade.png?branch=master)](https://travis-ci.org/then/then-jade)
-[![Dependency Status](https://gemnasium.com/then/then-jade.png)](https://gemnasium.com/then/then-jade)
+[![Dependency Status](https://gemnasium.com/jadejs/then-jade.png)](https://gemnasium.com/then/then-jade)
 [![NPM version](https://badge.fury.io/js/then-jade.png)](http://badge.fury.io/js/then-jade)
 
 ## Installation

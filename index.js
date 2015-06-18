@@ -25,7 +25,7 @@ exports.Parser = Parser
  * is transformed to ES5 by the `regenerator` module
  */
 var hasGenerators = true;
-var regenerator, wrapGenerator;
+var regenerator, regeneratorRuntime;
 try {
   Function('', 'var gn=function*() {}');
 } catch (ex) {
@@ -37,15 +37,15 @@ try {
  * Prepare the `regenerator` runtime.
  * `regenerator` transforms a function definition by removing all occurences
  * of the --harmony generator syntax (`function*`, `yield`) and replacing
- * them by calls to the wrapGenerator runtime
+ * them by calls to the regeneratorRuntime
  */
 if (!hasGenerators) {
-  wrapGenerator = (function () {
+  regeneratorRuntime = (function () {
     var vm = require('vm');
     var ctx = vm.createContext({});
-    var file = require.resolve('regenerator/runtime/dev.js');
+    var file = require.resolve('regenerator/runtime.js');
     vm.runInContext(fs.readFileSync(file, 'utf8'), ctx, file);
-    return ctx.wrapGenerator;
+    return ctx.regeneratorRuntime;
   }());
 }
 
@@ -96,13 +96,13 @@ function parse(str, options) {
     globals.push('jade_interp');
     globals.push('jade_debug');
     if (!hasGenerators) {
-      globals.push('wrapGenerator');
+      globals.push('regeneratorRuntime');
     }
     globals.push('buf');
 
     js = 'function* template() {\n' + js + '\n}\nreturn template;\n';
     if (!hasGenerators) {
-      js = regenerator(js);
+      js = regenerator.compile(js).code;
     }
     js = addWith('locals || {}', '\n' + js, globals);
 
@@ -170,7 +170,7 @@ function compileStreaming(str, options) {
   if (hasGenerators) {
       fn = new Function ('return function (locals, jade, buf) {' + fn + '}')();
   } else {
-      fn = new Function('wrapGenerator', 'return function (locals, jade, buf) {' + fn + '}')(wrapGenerator);
+      fn = new Function('regeneratorRuntime', 'return function (locals, jade, buf) {' + fn + '}')(regeneratorRuntime);
   }
 
   // convert it to a function that takes `locals` and returns a readable stream
