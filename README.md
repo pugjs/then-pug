@@ -15,7 +15,7 @@ It is not the goal of `then_jade` to modify the compilation phase of the process
 
 [![Build Status](https://travis-ci.org/jadejs/then-jade.png?branch=master)](https://travis-ci.org/then/then-jade)
 [![Dependency Status](https://gemnasium.com/jadejs/then-jade.png)](https://gemnasium.com/then/then-jade)
-[![NPM version](https://badge.fury.io/js/then-jade.png)](http://badge.fury.io/js/then-jade)
+[![NPM version](https://img.shields.io/npm/v/then-jade.svg)](https://www.npmjs.com/package/then-jade)
 
 ## Installation
 
