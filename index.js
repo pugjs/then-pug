@@ -43,7 +43,7 @@ if (!hasGenerators) {
   regeneratorRuntime = (function () {
     var vm = require('vm');
     var ctx = vm.createContext({});
-    var file = require.resolve('regenerator/runtime.js');
+    var file = require.resolve('regenerator-runtime/runtime.js');
     vm.runInContext(fs.readFileSync(file, 'utf8'), ctx, file);
     return ctx.regeneratorRuntime;
   }());
