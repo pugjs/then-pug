@@ -1,13 +1,13 @@
 {
   "name": "then-jade",
-  "version": "2.4.1",
+  "version": "2.4.2",
   "description": "Jade with async/streaming support via promises and generators",
   "keywords": [],
   "dependencies": {
     "barrage": "~1.1.0",
     "jade": "1.11.0",
     "promise": "~7.0.3",
-	"regenerator": "~0.8.46",
+    "regenerator": "~0.8.46",
     "regenerator-runtime": "~0.9.5",
     "then-yield": "0.0.1",
     "with": "~5.0.0"
