@@ -13,6 +13,8 @@ The Jade template engine is a templating engine with a 2 stage process :
 
 It is not the goal of `then_jade` to modify the compilation phase of the process (stage 1). This means for example that extends & includes will continue to be loaded synchronously by jade.
 
+Note: `jade` was frozen and deprecated in version 1.11.0 because of trademark issues. It was replaced by `pug` which has a new code architecture. `then-jade` is currently frozen and creating a `then-pug` module is only a very low priority task for the maintainers.
+
 [![Build Status](https://travis-ci.org/pugjs/then-jade.png?branch=master)](https://travis-ci.org/pugjs/then-jade)
 [![Dependency Status](https://gemnasium.com/jadejs/then-jade.png)](https://gemnasium.com/pugjs/then-jade)
 [![NPM version](https://img.shields.io/npm/v/then-jade.svg)](https://www.npmjs.com/package/then-jade)
