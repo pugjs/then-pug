@@ -14,7 +14,7 @@
   "devDependencies": {
     "mocha": "*",
     "should": "~3.1.2",
-    "uglify-js": "~2.4.12",
+    "uglify-js": "2.4.24",
     "mocha-as-promised": "~2.0.0",
     "coffee-script": "~1.7.1",
     "less": "~1.6.3",
