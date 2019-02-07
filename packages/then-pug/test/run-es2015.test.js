@@ -6,16 +6,17 @@ const mkdirp = require('mkdirp').sync;
 const runUtils = require('./run-utils');
 const pug = require('../');
 
-var cases = runUtils.findCases(__dirname + '/../../pug/test/cases');
-var es2015 = runUtils.findCases(__dirname + '/../../pug/test/cases-es2015');
+const testDir = '/../../pug/test/cases';
+const testSuffix = '-es2015';
+var cases = runUtils.findCases(__dirname + testDir + testSuffix);
 
-mkdirp(__dirname + '/output-es2015');
+mkdirp(__dirname + '/output' + testSuffix);
 
 describe('test cases for ECMAScript 2015', function () {
   try {
     eval('``');
-    es2015.forEach(runUtils.testSingle.bind(null, it, '-es2015'));
+    cases.forEach(runUtils.testSingle.bind(null, it, testDir, testSuffix));
   } catch (ex) {
-    es2015.forEach(runUtils.testSingle.bind(null, it.skip, '-es2015'));
+    cases.forEach(runUtils.testSingle.bind(null, it.skip, testDir, testSuffix));
   }
 });

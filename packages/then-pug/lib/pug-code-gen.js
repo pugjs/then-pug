@@ -20,6 +20,8 @@ var t = require('babel-types');
 var babelTemplate = require('babel-template');
 var findGlobals = require('with/lib/globals.js')
 var stringify = require('js-stringify');
+var babylon = require('babylon');
+
 
 /**
  * Inherit from base code generator
@@ -39,10 +41,14 @@ function Compiler(node, options) {
 Compiler.prototype = Object.create(BaseCodeGenerator.prototype);
 Compiler.prototype.constructor = Compiler;
 
+Compiler.prototype.parseExpr= function(expr) {
+  return babylon.parse('function*g(){return e='+expr+'}').program.body[0].body.body[0].argument.right;
+}
+
 Compiler.prototype.ast_with = function(ast) {
   let exclude = this.options.globals ? this.options.globals.concat(INTERNAL_VARIABLES) : INTERNAL_VARIABLES;
   exclude = exclude.concat(this.runtimeFunctionsUsed.map(function (name) { return 'pug_' + name; }));
-  exclude.push('undefined', 'this', 'locals', 'buf')
+  exclude.push('undefined', 'this', 'locals')
   let vars = findGlobals(t.program(ast)).map(function(v) { return v.name }).filter(function(v) { return exclude.indexOf(v) === -1 })
   if (vars.length > -1) {
     let bag = 'locals'

@@ -6,8 +6,8 @@ const mkdirp = require('mkdirp').sync;
 const runUtils = require('./run-utils');
 const pug = require('../');
 
-const testDir = '/../../pug/test/cases';
-const testSuffix = '';
+const testDir = '/cases';
+const testSuffix = '-then-pug';
 var cases = runUtils.findCases(__dirname + testDir + testSuffix);
 
 mkdirp(__dirname + '/output' + testSuffix);

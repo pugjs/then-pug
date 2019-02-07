@@ -1,0 +1,8 @@
+ul
+  - var dirs = yield readdir('packages/then-pug/test/cases-then-pug/samples')
+  for file in dirs
+    - var stats = yield stat('packages/then-pug/test/cases-then-pug/samples/' + file)
+    if stats.isFile()
+      li= file + " is a file"
+    if stats.isDirectory()
+      li= file + " is a directory"

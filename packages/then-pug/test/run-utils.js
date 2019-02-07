@@ -3,6 +3,7 @@ var assert = require('assert');
 var pug = require('../');
 var uglify = require('uglify-js');
 var mkdirp = require('mkdirp').sync;
+var Promise = require('promise');
 
 var filters = {
   custom: function (str, options) {
@@ -35,26 +36,30 @@ function findCases(dir) {
   });
 }
 
-function testSingle(it, suffix, test){
+function testSingle(it, caseDir, suffix, test){
   var name = test.replace(/[-.]/g, ' ');
   it(name, function(){
-    var path = __dirname + '/../../pug/test/cases' + suffix + '/' + test + '.pug';
+    var path = __dirname + caseDir + suffix + '/' + test + '.pug';
     var str = fs.readFileSync(path, 'utf8');
     var fn = pug.compile(str, {
       filename: path,
       pretty: true,
-      basedir: __dirname + '/../../pug/test/cases' + suffix,
+      basedir: __dirname + caseDir + suffix,
       filters: filters,
       filterAliases: {'markdown': 'markdown-it'},
     });
-    var d_actual = fn({ title: 'Pug' });
-    var html = fs.readFileSync(__dirname + '/../../pug/test/cases' + suffix + '/' + test + '.html', 'utf8').trim().replace(/\r/g, '');
+    var d_actual = fn({
+      title: 'Pug',
+      readdir: Promise.denodeify(fs.readdir),
+      stat: Promise.denodeify(fs.stat)
+    });
+    var html = fs.readFileSync(__dirname + caseDir + suffix + '/' + test + '.html', 'utf8').trim().replace(/\r/g, '');
 
     var clientCode = uglify.minify(pug.compileClient(str, {
       filename: path,
       pretty: true,
       compileDebug: false,
-      basedir: __dirname + '/../../pug/test/cases' + suffix,
+      basedir: __dirname + caseDir + suffix,
       filters: filters,
       filterAliases: {'markdown': 'markdown-it'},
     }), {output: {beautify: true}, mangle: false, compress: false, fromString: true}).code;
