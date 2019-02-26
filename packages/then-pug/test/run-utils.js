@@ -48,6 +48,7 @@ function testSingle(it, caseDir, suffix, test){
       filters: filters,
       filterAliases: {'markdown': 'markdown-it'},
     });
+    process.chdir(__dirname);
     var d_actual = fn({
       title: 'Pug',
       readdir: Promise.denodeify(fs.readdir),
