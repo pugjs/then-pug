@@ -11,11 +11,11 @@ var stringify = require('js-stringify');
 
 var findGlobals = require('with/lib/globals.js')
 
-var t = require('babel-types');
-var gen = require('babel-generator');
+var t = require('@babel/types');
+var gen = require('@babel/generator');
 var babylon = require('babylon');
-var babelTemplate = require('babel-template');
-var babel = require('babel-core');
+var { default: babelTemplate } = require('@babel/template');
+var babel = require('@babel/core');
 
 // This is used to prevent pretty printing inside certain tags
 var WHITE_SPACE_SENSITIVE_TAGS = {
@@ -35,8 +35,8 @@ var INTERNAL_VARIABLES = [
 
 var push = Array.prototype.push;
 
-var tpl_interp = babelTemplate('null == (pug_interp = VALUE) ? "" : pug_interp');
-var tpl_interp_escape = babelTemplate('ESCAPE(null == (pug_interp = VALUE) ? "" : pug_interp)');
+var tpl_interp = babelTemplate('null == (pug_interp = %%VALUE%%) ? "" : pug_interp', {syntacticPlaceholders: true});
+var tpl_interp_escape = babelTemplate('%%ESCAPE%%(null == (pug_interp = %%VALUE%%) ? "" : pug_interp)', {syntacticPlaceholders: true});
 
 module.exports = generateCode;
 module.exports.CodeGenerator = Compiler;
@@ -1000,7 +1000,7 @@ Compiler.prototype = {
       if (code.block) {
         this.codeIndex++;
         var marker = "PUGMARKER"+this.codeIndex;
-        this.codeBuffer += "\n{" + marker + "}\n";
+        this.codeBuffer += "\n{%%" + marker + "%%}\n";
         // snaphsot current unbuffered code level
         // this is necessary to accept embedded code blocks
         // - if (true) {
@@ -1029,7 +1029,7 @@ Compiler.prototype = {
       if (idx == ctx.nodes.length || ctx.nodes[idx].type != 'Code' || ctx.nodes[idx].buffer) {
         try {
           var src = this.codeBuffer + '}';
-          var tpl = babelTemplate(src);
+          var tpl = babelTemplate(src, {syntacticPlaceholders:true});
           push.apply(ast, tpl(this.codeMarker).expression.right.body.body);
           this.codeBuffer = '_=function*(){';
           this.codeIndex = -1;
